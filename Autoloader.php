@@ -8,30 +8,35 @@
  * <code>
  * $configArray = array(
  *
- * // necessary if the router is not stored in the same directory as e.g. src/;
- * // requires an closing slash;
- * 'baseDir' => './',
+ * // Necessary if the router is not stored in the same directory as e.g. src/;
+ * 'baseDir' => '.',
  *
- * // comma-separated string or array
- * 'includeDirs' => 'src/',
+ * // Comma-separated string or array
+ * 'includeDirs' => 'src,lib',
  *
- * // string to be skipped/trimmed from class name,
- * // may be also the first namespace-part, depending on 'useNamespaces'
+ * // String to be skipped/trimmed from class name.
+ * // Maybe also the first namespace-part, depending on 'useNamespaces'
  * 'skip' => null,
  *
- * // comma-separated string or array, gets parsed with sprintf()
+ * // Comma-separated string or array, gets parsed with sprintf()
  * 'filePattern' => '%s.php,%s.inc',
  *
- * // use namespaces as directories, appended to the 'includeDirs'
- * // if set to true, this overrides 'classNameToDirDelimiter' with a backslash (\)
+ * // Use namespaces as directories, appended to the 'includeDirs'
  * 'useNamespaces' => true,
  *
- * // explode class name with 'classNameToDirDelimiter' to get directories;
+ * // Explode class name with 'classNameToDirDelimiter' to get directories;
+ * // This is set to TRUE when 'useNamespaces' is TRUE
  * 'classNameToDir' => false,
  *
+ * // This is overwritten with a backslash when 'useNamespaces' is TRUE
  * 'classNameToDirDelimiter' => '_',
+ * 
+ * // This could be a callback to map a classname to a specific filename;
+ * // If a callback is set and if it returns something else then FALSE,
+ * // the returned value will be used for require_once
+ * 'resolveStaticClassName' => null,
  *
- * // transform class name to lowercase
+ * // Transform class names to lowercase
  * 'lowercase' => false,
  *
  * );
@@ -61,15 +66,16 @@ class Autoloader
 	{
 		/* merge array into default configuration */
 		$this->classLoaderConfig = array_merge( array(
-			'baseDir' => './',
-			'includeDirs' => 'src/,lib/',
+			'baseDir' => '.',
+			'includeDirs' => 'src,lib',
 			'skip' => null,
 			'filePattern' => '%s.php,%s.inc',
 			'useNamespaces' => true,
 			'classNameToDir' => false,
 			'classNameToDirDelimiter' => '_',
+			'resolveStaticClassName' => null,
 			'lowercase' => false,
-				), ( array ) $configArray );
+		), ( array ) $configArray );
 	}
 
 	/**
@@ -81,6 +87,16 @@ class Autoloader
 	 */
 	private function classLoader( $className )
 	{
+		if( is_callable( $this->classLoaderConfig['resolveStaticClassName'] ) )
+		{
+			$staticClassname = $this->classLoaderConfig['resolveStaticClassName']( $className );
+			if( false !== $staticClassname )
+			{
+				require_once $staticClassname;
+				return true;
+			}
+		}
+
 		$includeDirs = $this->getArray( $this->classLoaderConfig['includeDirs'] );
 
 		if( $this->classLoaderConfig['useNamespaces'] === false )
@@ -112,11 +128,11 @@ class Autoloader
 
 			$className = array_pop( $classDirs ); // part after last delimiter as class name
 
-			$classDirString = implode( '/', $classDirs );
+			$classDirString = implode( DIRECTORY_SEPARATOR, $classDirs );
 			if( !empty( $classDirString ) )
 			{
 				$includeDirs = array_map( function( $value ) use( $classDirString ) {
-					return $value . $classDirString . '/';
+					return $value . DIRECTORY_SEPARATOR . $classDirString . DIRECTORY_SEPARATOR;
 				}, $includeDirs );
 			}
 		}
@@ -127,7 +143,7 @@ class Autoloader
 			/* iterate over specified file pattern */
 			foreach( $this->getArray( $this->classLoaderConfig['filePattern'] ) as $filePattern )
 			{
-				$realDirectory = realpath( $this->classLoaderConfig['baseDir'] . $directory ) . '/';
+				$realDirectory = realpath( $this->classLoaderConfig['baseDir'] . DIRECTORY_SEPARATOR . $directory ) . DIRECTORY_SEPARATOR;
 				$fileName = $realDirectory . sprintf( $filePattern, $className );
 				if( file_exists( $fileName ) )
 				{
