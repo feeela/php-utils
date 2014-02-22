@@ -2,34 +2,38 @@
 
 /**
  * A configurable class autoloader.
- * 
+ *
  * The default config-array is:
  * 
  * <code>
  * $configArray = array(
- * 
+ *
+ * // necessary if the router is not stored in the same directory as e.g. src/;
+ * // requires an closing slash;
+ * 'baseDir' => './',
+ *
  * // comma-separated string or array
- * 'includeDirs' => 'lib/',
- * 
- * // directory to be skipped if it is the first one,
+ * 'includeDirs' => 'src/',
+ *
+ * // string to be skipped/trimmed from class name,
  * // may be also the first namespace-part, depending on 'useNamespaces'
  * 'skip' => null,
- * 
- * // comma-separated string or array of sprintf()-formats
+ *
+ * // comma-separated string or array, gets parsed with sprintf()
  * 'filePattern' => '%s.php,%s.inc',
- * 
+ *
  * // use namespaces as directories, appended to the 'includeDirs'
  * // if set to true, this overrides 'classNameToDirDelimiter' with a backslash (\)
  * 'useNamespaces' => true,
- * 
+ *
  * // explode class name with 'classNameToDirDelimiter' to get directories;
  * 'classNameToDir' => false,
- * 
+ *
  * 'classNameToDirDelimiter' => '_',
- * 
+ *
  * // transform class name to lowercase
  * 'lowercase' => false,
- * 
+ *
  * );
  * </code>
  * 
@@ -51,28 +55,29 @@ class Autoloader
 	}
 
 	/**
-	 * @param array $configArray 
+	 * @param array $configArray
 	 */
 	private function setClassLoaderConfig( $configArray )
 	{
 		/* merge array into default configuration */
 		$this->classLoaderConfig = array_merge( array(
-			'includeDirs' => 'lib/',
+			'baseDir' => './',
+			'includeDirs' => 'src/,lib/',
 			'skip' => null,
 			'filePattern' => '%s.php,%s.inc',
 			'useNamespaces' => true,
 			'classNameToDir' => false,
 			'classNameToDirDelimiter' => '_',
 			'lowercase' => false,
-		), ( array ) $configArray );
+				), ( array ) $configArray );
 	}
 
 	/**
 	 * A configurable class autoloader.
-	 * 
+	 *
 	 * @param string $className may use namespaces for folders
 	 * @return boolean
-	 * @throws \RuntimeException 
+	 * @throws \RuntimeException
 	 */
 	private function classLoader( $className )
 	{
@@ -98,7 +103,7 @@ class Autoloader
 		/* skip first part of class name, if specified */
 		if( !is_null( $this->classLoaderConfig['skip'] ) && substr( $className, 0, strlen( $this->classLoaderConfig['skip'] ) ) == $this->classLoaderConfig['skip'] )
 		{
-			$className = substr( $className, strlen( $this->classLoaderConfig['skip'] ) );
+			$className = ltrim( substr( $className, strlen( $this->classLoaderConfig['skip'] ) ), '\\' );
 		}
 
 		if( $this->classLoaderConfig['classNameToDir'] == true )
@@ -108,36 +113,26 @@ class Autoloader
 			$className = array_pop( $classDirs ); // part after last delimiter as class name
 
 			$classDirString = implode( '/', $classDirs );
-			foreach( $includeDirs as &$directory )
+			if( !empty( $classDirString ) )
 			{
-				if( empty( $classDirString ) )
-				{
-					continue;
-				}
-
-				$directory .= $classDirString . '/';
+				$includeDirs = array_map( function( $value ) use( $classDirString ) {
+					return $value . $classDirString . '/';
+				}, $includeDirs );
 			}
 		}
 
-		// iterate over specified directories
+		/* iterate over specified directories */
 		foreach( $includeDirs as $directory )
 		{
-			// iterate over specified file pattern
+			/* iterate over specified file pattern */
 			foreach( $this->getArray( $this->classLoaderConfig['filePattern'] ) as $filePattern )
 			{
-				$fileName = sprintf( '%s%s', $directory, sprintf( $filePattern, $className ) );
+				$realDirectory = realpath( $this->classLoaderConfig['baseDir'] . $directory ) . '/';
+				$fileName = $realDirectory . sprintf( $filePattern, $className );
 				if( file_exists( $fileName ) )
 				{
 					require_once $fileName;
 					return true;
-				}
-				else
-				{
-					/*
-					 * Do not throw an exception here, or further autloader
-					 * wont get called from the SPL __autoload stack.
-					 */
-					return false;
 				}
 			}
 		}
@@ -146,10 +141,7 @@ class Autoloader
 	/**
 	 * Returns an array. If the value is scalar,
 	 * it will get exploded by $delimiter.
-	 * 
-	 * This is a copy from the Utils class, to ensure
-	 * the Autoloader could be used standalone.
-	 * 
+	 *
 	 * @param mixed $value
 	 * @param string $delimiter (default: ',')
 	 * @return array
