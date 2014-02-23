@@ -38,7 +38,7 @@ class IterableCountable implements \Iterator, \Countable
     /**
      * @param string $key
      * @param mixed $value
-     * @return boolean|\nippy\IterableCountable 
+     * @return boolean|IterableCountable 
      */
     public function set( $key, $value )
     {
@@ -66,7 +66,7 @@ class IterableCountable implements \Iterator, \Countable
 
     /**
      * @param string $key
-     * @return \nippy\IterableCountable 
+     * @return IterableCountable 
      */
     public function remove( $key )
     {

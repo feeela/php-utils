@@ -13,7 +13,7 @@
  * 
  * Any values that are not scalar (e.g. arrays, objects) will be stored as JSON encoded string.
  *
- * @example For usage examples see the \nippy\IterableCountable class documentation.
+ * @example For usage examples see the IterableCountable class documentation.
  */
 class KeyValueTable extends IterableCountable
 {
@@ -106,7 +106,7 @@ class KeyValueTable extends IterableCountable
 	 * 
 	 * @param string|int $key
 	 * @param mixed $value
-	 * @return boolean|\nippy\KeyValueTable
+	 * @return boolean|KeyValueTable
 	 */
 	public function set( $key, $value )
 	{
