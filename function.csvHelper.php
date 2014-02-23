@@ -1,6 +1,47 @@
 <?php
 
 /**
+ * Return two-dimensional array as CSV string.
+ *
+ * @param array $data array of associative arrays
+ * @return string CSV output or an empty string on error
+ */
+function arrayToCsv( array $data )
+{
+    if( empty( $data ) )
+    {
+        return '';
+    }
+
+    /* display field/column names as first row */
+    $csvOutput = implode( ',', array_keys( current( $data ) ) ) . "\n";
+
+    /* get CSV log rows */
+    foreach( $data as $row )
+    {
+        /**
+         * Wrap strings in quotes and replaces mistyped tab- and newline-characters.
+         *
+         * @param string $str
+         */
+        array_walk( $row, function( &$str ) {
+            if( !is_scalar( $str ) )
+            {
+                $str = implode( '|', $str );
+            }
+            $str = preg_replace(
+                    array( "/\t/", "/\r?\n/", '/"/' ), array( "\\t", "\\n", '""' ), $str
+            );
+            $str = '"' . $str . '"';
+        } );
+
+        $csvOutput .= implode( ',', array_values( $row ) ) . "\n";
+    }
+
+    return $csvOutput;
+}
+
+/**
  * Read a CSV file, given an open resource handle.
  *
  * @param resource $handle
@@ -62,7 +103,6 @@ function readCsv( $handle, $firstRowContainsHeadings = true, $identifierColumnNu
  * @param string $path Will get used as path as output directory
  * @param boolean $appendDate (optional) Toggles appending date string to filename (defaults to true)
  * @return string Returns the filename that was written into or FALSE on error.
- * @depends arrayToCsv()
  */
 function writeCsv( array $data, $filename, $path = null, $appendDate = true )
 {
