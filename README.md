@@ -2,6 +2,8 @@
 
 A collection of my PHP code snippets.
 
+**This repository is now maintained at https://gitlab.com/feeela/php-utils**
+
 ## Classes
 
 - Autoloader – A configurable class autoloader.
